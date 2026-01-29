@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FETCH - Find Your New Best Friend</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <style>
+    :root {
+      --spca-green: #00B559;
+      --spca-dark: #1c1c1b;
+      --love-red: #e74c3c;
+      --bg-gray: #f8f9fa;
+      --text-gray: #666;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      width: 100%; height: 100vh; overflow: hidden; background: var(--bg-gray);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .widget { 
+      width: 100%; height: 100%; max-width: 450px; margin: 0 auto; 
+      padding: 15px; display: flex; flex-direction: column;
+    }
+
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0 15px 0;
+    }
+
+    .logo { font-size: 1.5rem; font-weight: 900; letter-spacing: -1px; color: var(--spca-dark); }
+
+    .fav-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: white; padding: 8px 14px; border-radius: 50px;
+      border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .fav-pill:active { transform: scale(0.9); }
+    .fav-pill.pulse { animation: pulse-red 0.4s ease-out; }
+
+    @keyframes pulse-red {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); border-color: var(--love-red); }
+      100% { transform: scale(1); }
+    }
+
+    .fav-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #555; }
+    #favNum { 
+      background: var(--love-red); color: white; font-size: 0.7rem; 
+      min-width: 18px; height: 18px; display: flex; align-items: center; 
+      justify-content: center; border-radius: 10px; font-weight: bold;
+    }
+
+    .controls-area { margin-bottom: 15px; }
+    .refine-trigger {
+      width: 100%; padding: 12px; border: none; border-radius: 12px;
+      background: var(--spca-green); color: white; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 181, 89, 0.2); cursor: pointer;
+    }
+
+    .card-container { position: relative; flex: 1; perspective: 1200px; margin-top: 5px; }
+    
+    .card { 
+      position: absolute; width: 100%; height: 100%; 
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+      z-index: 5; touch-action: none;
+    }
+    
+    .card-inner { 
+      width: 100%; height: 100%; 
+      position: relative;
+      transform-style: preserve-3d; 
+      -webkit-transform-style: preserve-3d; 
+      transition: transform 0.6s ease;
+    }
+    
+    .card.flipped .card-inner { 
+      transform: rotateY(180deg); 
+      -webkit-transform: rotateY(180deg);
+    }
+    
+    .card-front, .card-back { 
+      position: absolute; 
+      width: 100%; height: 100%; 
+      -webkit-backface-visibility: hidden; 
+      backface-visibility: hidden; 
+      border-radius: 20px;
+      background: white;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .card-front { 
+      z-index: 2; 
+      transform: rotateY(0deg); 
+      pointer-events: auto;
+    }
+    
+    .card-back { 
+      transform: rotateY(180deg); 
+      -webkit-transform: rotateY(180deg);
+      z-index: 1; 
+      display: flex; 
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    .card.flipped .card-front { pointer-events: none; }
+    .card.flipped .card-back { pointer-events: auto; z-index: 100; }
+
+    .card-image { 
+      width: 100%; height: 68%; background-size: cover; background-position: center;
+      position: relative;
+    }
+    .card-info { padding: 18px; }
+    .pet-name { font-size: 1.8rem; font-weight: 800; color: var(--spca-dark); margin-bottom: 4px; }
+    .pet-meta { color: #777; font-size: 0.95rem; font-weight: 500; }
+    .pet-loc { color: var(--spca-green); font-weight: 700; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+
+    .tag-badge {
+      position: absolute; bottom: 15px; left: 15px; background: var(--spca-green);
+      color: white; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem;
+      font-weight: 800; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .back-header {
+      background: linear-gradient(135deg, var(--spca-green), #00a050);
+      padding: 18px 20px;
+      color: white;
+      flex-shrink: 0;
+    }
+    .back-header h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
+    .back-header .back-subtitle { opacity: 0.9; font-size: 0.85rem; }
+    
+    .back-content {
+      flex: 1;
+      padding: 15px 20px;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
+    
+    .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;
+    }
+    .info-item { background: #f8f9fa; padding: 10px 12px; border-radius: 10px; }
+    .info-label { font-size: 0.7rem; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 3px; }
+    .info-value { font-weight: 600; color: var(--spca-dark); font-size: 0.9rem; }
+    
+    .description-section { margin-top: 10px; }
+    .description-section .section-title { font-size: 0.75rem; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+    .description-text { font-size: 0.9rem; line-height: 1.5; color: #444; }
+    
+    .attr-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .attr-tag { background: #e8f9f0; color: var(--spca-green); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    
+    .back-actions { padding: 12px 20px 15px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
+    .btn-view-profile {
+      display: block; width: 100%; text-align: center; background: var(--spca-green); color: white;
+      padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 700;
+      font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,181,89,0.25);
+    }
+    .btn-flip-back {
+      width: 100%; margin-top: 8px; border: none; background: transparent; color: #999;
+      cursor: pointer; font-size: 0.85rem; padding: 6px;
+    }
+
+    .actions { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 20px 0; }
+    .action-btn {
+      width: 60px; height: 60px; border-radius: 50%; border: none; background: white;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; font-size: 1.4rem; transition: transform 0.2s;
+    }
+    .action-btn:active { transform: scale(0.85); }
+    .action-btn.nope { color: var(--love-red); border: 2px solid #ffebec; }
+    .action-btn.like { color: var(--spca-green); border: 2px solid #e8f9f0; }
+    .action-btn.info { width: 50px; height: 50px; color: #3498db; border: 2px solid #eef7fd; }
+
+    .swiping-right { transform: translateX(1000px) rotate(30deg) !important; opacity: 0; }
+    .swiping-left { transform: translateX(-1000px) rotate(-30deg) !important; opacity: 0; }
+
+    .modal-view {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--bg-gray); z-index: 2000; display: none; flex-direction: column;
+      padding: 20px; overflow-y: auto;
+    }
+    
+    .filter-group { margin-bottom: 25px; }
+    .filter-label { font-weight: 700; font-size: 0.85rem; color: #888; margin-bottom: 10px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .filter-select {
+      width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd;
+      font-size: 1rem; background: white; appearance: none;
+    }
+
+    .toggle-container { display: flex; gap: 10px; flex-wrap: wrap; }
+    .toggle-btn {
+      flex: 1; padding: 12px; border: 1px solid #ddd; background: white;
+      border-radius: 50px; font-weight: 600; color: #555; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s; min-width: 100px;
+    }
+    .toggle-btn.active {
+      background: var(--spca-green); color: white; border-color: var(--spca-green);
+      box-shadow: 0 4px 10px rgba(0, 181, 89, 0.3);
+    }
+    
+    .pref-icon { color: transparent; text-shadow: 0 0 0 #555; }
+    .toggle-btn.active .pref-icon { text-shadow: 0 0 0 white; }
+
+    .range-wrap { padding: 10px 5px; }
+    input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
+      background: var(--spca-green); cursor: pointer; margin-top: -10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #ddd; border-radius: 2px; }
+
+    .btn-apply {
+      width: 100%; padding: 16px; background: var(--spca-green); color: white;
+      border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
+      margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 181, 89, 0.25);
+    }
+    .btn-clear {
+      width: 100%; padding: 15px; background: transparent; color: #999;
+      border: none; font-weight: 600; margin-top: 5px; cursor: pointer;
+    }
+
+    .fav-item {
+      display: flex; align-items: center; background: white; padding: 12px;
+      border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      cursor: pointer;
+    }
+    .fav-img { width: 55px; height: 55px; border-radius: 12px; background-size: cover; margin-right: 15px; }
+
+    .confirm-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      z-index: 3000; display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .confirm-box {
+      background: white; width: 100%; max-width: 320px; border-radius: 20px;
+      padding: 25px; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .confirm-title { font-size: 1.2rem; font-weight: 900; color: var(--spca-dark); margin-bottom: 10px; }
+    .confirm-text { color: #666; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .btn-modal { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; }
+    .btn-cancel { background: #eee; color: #555; }
+    .btn-danger { background: var(--love-red); color: white; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); }
+
+    .loader-container { text-align: center; margin-top: 100px; }
+    .loader-spinner {
+      width: 50px; height: 50px; border: 4px solid #eee;
+      border-top-color: var(--spca-green); border-radius: 50%;
+      animation: spin 1s linear infinite; margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { color: #999; font-weight: bold; }
+    .loader-subtext { color: #ccc; font-size: 0.85rem; margin-top: 8px; }
+    
+    .error-container { text-align: center; margin-top: 80px; padding: 20px; }
+    .error-icon { font-size: 3rem; margin-bottom: 15px; }
+    .error-title { font-weight: bold; color: var(--spca-dark); margin-bottom: 10px; }
+    .error-text { color: #888; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
+    .btn-retry {
+      padding: 12px 30px; border: none; background: var(--spca-green); color: white;
+      border-radius: 50px; font-weight: bold; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,181,89,0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="widget">
+  <div class="header-bar">
+    <div class="logo">FETCH 🐾</div>
+    <div id="favCount" class="fav-pill" onclick="showFavs()">
+      <span>❤️</span>
+      <span class="fav-label">Faves</span>
+      <span id="favNum">0</span>
+    </div>
+  </div>
+
+  <div class="controls-area">
+    <button class="refine-trigger" onclick="showFilters()">
+      <span>🔍</span> Filter Preferences
+    </button>
+  </div>
+
+  <div class="card-container" id="cardContainer">
+    <div class="loader-container">
+      <div class="loader-spinner"></div>
+      <p class="loader-text">Sniffing out pets...</p>
+      <p class="loader-subtext">Loading from SPCA database</p>
+    </div>
+  </div>
+
+  <div class="actions" id="actions" style="visibility:hidden;">
+    <button class="action-btn nope" onclick="swipe('left')">✕</button>
+    <button class="action-btn info" onclick="flipCard()">ℹ️</button>
+    <button class="action-btn like" onclick="swipe('right')">❤️</button>
+  </div>
+</div>
+
+<div id="favView" class="modal-view">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <button onclick="hideFavs()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">✕</button>
+    <h3 style="font-weight:900;">YOUR FAVOURITES</h3>
+    <button onclick="openClearModal()" style="border:none; background:none; color:var(--love-red); font-weight:bold;">Clear</button>
+  </div>
+  <div id="favList" style="flex:1;"></div>
+</div>
+
+<div id="filterView" class="modal-view">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <button onclick="hideFilters()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">✕</button>
+    <h3 style="font-weight:900;">FILTER PETS</h3>
+    <div style="width:20px;"></div>
+  </div>
+  
+  <div style="flex:1;">
+    <div class="filter-group">
+      <label class="filter-label">Species</label>
+      <select id="speciesSelect" class="filter-select">
+        <option value="all">All Species</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Breed</label>
+      <select id="breedSelect" class="filter-select">
+        <option value="all">All Breeds</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <label class="filter-label">Centre / Location</label>
+      <select id="centreSelect" class="filter-select">
+        <option value="all">All Locations</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Gender</label>
+      <div class="toggle-container">
+        <button class="toggle-btn" id="btnMale" onclick="toggleGender('Male')">Male</button>
+        <button class="toggle-btn" id="btnFemale" onclick="toggleGender('Female')">Female</button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Max Age: <span id="ageLabel" style="color:var(--spca-green);">Any</span></label>
+      <div class="range-wrap">
+        <input type="range" id="ageSlider" min="1" max="21" value="21" oninput="updateAgeLabel(this.value)">
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Preferences (Must be good with...)</label>
+      <div class="toggle-container">
+        <button class="toggle-btn" id="btnKids" onclick="togglePref('kids')">
+          <span class="pref-icon">👶</span> Kids
+        </button>
+        <button class="toggle-btn" id="btnPets" onclick="togglePref('pets')">
+          <span class="pref-icon">🐾</span> Animals
+        </button>
+        <button class="toggle-btn" id="btnLongTerm" onclick="togglePref('longterm')">
+          <span class="pref-icon">⏳</span> Long Stay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <button class="btn-apply" onclick="applyFilters()">Show Matches</button>
+    <button class="btn-clear" onclick="resetFilters()">Reset Filters</button>
+  </div>
+</div>
+
+<div id="confirmModal" class="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Clear Favourites?</div>
+    <div class="confirm-text">
+      Are you sure you want to remove all saved pets? This cannot be undone.
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-modal btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn-modal btn-danger" onclick="confirmClear()">Yes, Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// YOUR APPS SCRIPT API URL
+const API_URL = 'https://script.google.com/macros/s/AKfycbwpOqaPpORCIPy-SLD8WryNAG8v2FzHKff9P83iQAORrHFeqXHSwGhbYQ6Uug2jqe87/exec?action=getData';
+
+let allPets = [], filtered = [], idx = 0;
+let favs = JSON.parse(localStorage.getItem('fetch_favs_v2') || '[]');
+
+let filterState = {
+  species: 'all', breed: 'all', centre: 'all', gender: [],
+  maxAge: 21, reqKids: false, reqPets: false, reqLongTerm: false
+};
+
+function init() {
+  updateFavCount();
+  fetchPetData();
+}
+
+function fetchPetData() {
+  const container = document.getElementById('cardContainer');
+  container.innerHTML = `
+    <div class="loader-container">
+      <div class="loader-spinner"></div>
+      <p class="loader-text">Sniffing out pets...</p>
+      <p class="loader-subtext">Loading from SPCA database</p>
+    </div>`;
+
+  fetch(API_URL)
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    })
+    .then(data => {
+      if (data.success && data.pets) {
+        allPets = data.pets;
+        allPets.sort(() => Math.random() - 0.5);
+        filtered = allPets;
+        populateFilterOptions();
+        render();
+      } else {
+        showError(data.error || 'No pets found');
+      }
+    })
+    .catch(err => {
+      console.error('Fetch error:', err);
+      showError('Could not load pets. Please try again.');
+    });
+}
+
+function showError(message) {
+  const container = document.getElementById('cardContainer');
+  container.innerHTML = `
+    <div class="error-container">
+      <div class="error-icon">🐕</div>
+      <div class="error-title">Oops! Something went wrong</div>
+      <div class="error-text">${message}</div>
+      <button class="btn-retry" onclick="fetchPetData()">Try Again</button>
+    </div>`;
+}
+
+function render() {
+  const container = document.getElementById('cardContainer');
+  const actionArea = document.getElementById('actions');
+  container.innerHTML = '';
+
+  if (idx >= filtered.length) {
+    container.innerHTML = `<div style="text-align:center; padding-top:80px;">
+      <h2>End of the Pack!</h2>
+      <p style="margin-bottom:20px; color:#666;">${filtered.length === 0 ? 'No pets match your criteria.' : 'No more pets found.'}</p>
+      <button onclick="idx=0;render()" style="padding:12px 24px; border:none; background:white; border-radius:50px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.1);">Restart Stack ↺</button>
+    </div>`;
+    actionArea.style.visibility = 'hidden';
+    return;
+  }
+
+  actionArea.style.visibility = 'visible';
+  const pool = filtered.slice(idx, idx + 2).reverse();
+  
+  pool.forEach((pet, i) => {
+    const isTop = (i === pool.length - 1);
+    const card = document.createElement('div');
+    card.className = 'card ' + (isTop ? 'active' : 'behind');
+    if(isTop) card.id = 'activeCard';
+
+    const attrTags = pet.attributes 
+      ? pet.attributes.split(',').map(a => a.trim()).filter(a => a).map(a => `<span class="attr-tag">${a}</span>`).join('')
+      : '';
+
+    const hasDescription = pet.description && pet.description.trim() && pet.description !== pet.attributes;
+
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-front" id="cardFront">
+          <div class="card-image" style="background-image:url('${pet.imageUrl}')">
+            ${pet.tag ? `<div class="tag-badge">${pet.tag}</div>` : ''}
+          </div>
+          <div class="card-info">
+            <div class="pet-name">${pet.name}</div>
+            <div class="pet-meta">${pet.breed} • ${pet.age}</div>
+            <div class="pet-loc">📍 ${pet.centre}</div>
+          </div>
+        </div>
+        
+        <div class="card-back">
+          <div class="back-header">
+            <h2>Meet ${pet.name}</h2>
+            <div class="back-subtitle">${pet.species} • ${pet.centre}</div>
+          </div>
+          
+          <div class="back-content">
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Breed</div>
+                <div class="info-value">${pet.breed || 'Unknown'}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Gender</div>
+                <div class="info-value">${pet.gender || 'Unknown'}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Age</div>
+                <div class="info-value">${pet.age || 'Unknown'}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Location</div>
+                <div class="info-value">${pet.centre}</div>
+              </div>
+            </div>
+            
+            ${hasDescription ? `
+            <div class="description-section">
+              <div class="section-title">About ${pet.name}</div>
+              <div class="description-text">${pet.description}</div>
+            </div>
+            ` : ''}
+            
+            ${attrTags ? `
+            <div class="description-section">
+              <div class="section-title">Traits</div>
+              <div class="attr-tags">${attrTags}</div>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="back-actions">
+            <a href="${pet.profileUrl}" target="_blank" class="btn-view-profile">
+              View Full Profile on SPCA ↗
+            </a>
+            <button class="btn-flip-back" onclick="flipCard()">
+              ← Back to Photo
+            </button>
+          </div>
+        </div>
+      </div>`;
+    
+    container.appendChild(card);
+    if(isTop) setupDrag(card);
+  });
+}
+
+function setupDrag(card) {
+  let startX = 0, currentX = 0, isDragging = false;
+  const front = card.querySelector('#cardFront');
+
+  const start = e => {
+    if (card.classList.contains('flipped')) return;
+    isDragging = true;
+    const touch = e.type.includes('mouse') ? e : e.touches[0];
+    startX = touch.clientX;
+    card.style.transition = 'none';
+  };
+  const move = e => {
+    if (!isDragging || card.classList.contains('flipped')) return;
+    const touch = e.type.includes('mouse') ? e : e.touches[0];
+    currentX = touch.clientX - startX;
+    if(Math.abs(currentX) > 10) {
+      if(e.cancelable) e.preventDefault();
+      card.style.transform = 'translateX(' + currentX + 'px) rotate(' + (currentX * 0.05) + 'deg)';
+    }
+  };
+  const end = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    card.style.transition = 'transform 0.3s';
+    if (currentX > 110) swipe('right');
+    else if (currentX < -110) swipe('left');
+    else { card.style.transform = ''; }
+    currentX = 0;
+  };
+  
+  front.addEventListener('mousedown', start);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  front.addEventListener('touchstart', start, {passive: true});
+  window.addEventListener('touchmove', move, {passive: false});
+  window.addEventListener('touchend', end);
+}
+
+function swipe(dir) {
+  const card = document.getElementById('activeCard');
+  if(!card) return;
+  if(card.classList.contains('flipped')) card.classList.remove('flipped');
+  card.classList.add(dir === 'right' ? 'swiping-right' : 'swiping-left');
+  if(dir === 'right') {
+    const pet = filtered[idx];
+    if(!favs.find(f => f.id === pet.id)) {
+      favs.push(pet);
+      localStorage.setItem('fetch_favs_v2', JSON.stringify(favs));
+      updateFavCount();
+    }
+  }
+  setTimeout(() => { idx++; render(); }, 300);
+}
+
+function flipCard() {
+  const card = document.getElementById('activeCard');
+  if(card) { card.style.transform = ''; card.classList.toggle('flipped'); }
+}
+
+function populateFilterOptions() {
+  const speciesSet = new Set(), breedSet = new Set(), centreSet = new Set();
+  allPets.forEach(p => {
+    if(p.species) speciesSet.add(p.species);
+    if(p.breed) breedSet.add(p.breed);
+    if(p.centre) centreSet.add(p.centre);
+  });
+  fillSelect('speciesSelect', speciesSet);
+  fillSelect('breedSelect', breedSet);
+  fillSelect('centreSelect', centreSet);
+}
+
+function fillSelect(id, set) {
+  const sel = document.getElementById(id);
+  sel.length = 1; 
+  Array.from(set).sort().forEach(val => {
+    const opt = document.createElement('option');
+    opt.value = val; opt.text = val;
+    sel.add(opt);
+  });
+}
+
+function toggleGender(g) {
+  document.getElementById('btn' + g).classList.toggle('active');
+  const index = filterState.gender.indexOf(g);
+  if(index > -1) filterState.gender.splice(index, 1);
+  else filterState.gender.push(g);
+}
+
+function togglePref(type) {
+  if(type === 'kids') { filterState.reqKids = !filterState.reqKids; document.getElementById('btnKids').classList.toggle('active'); }
+  if(type === 'pets') { filterState.reqPets = !filterState.reqPets; document.getElementById('btnPets').classList.toggle('active'); }
+  if(type === 'longterm') { filterState.reqLongTerm = !filterState.reqLongTerm; document.getElementById('btnLongTerm').classList.toggle('active'); }
+}
+
+function updateAgeLabel(val) {
+  filterState.maxAge = parseInt(val);
+  document.getElementById('ageLabel').innerText = val >= 21 ? 'Any' : val + ' Years';
+}
+
+function applyFilters() {
+  filterState.species = document.getElementById('speciesSelect').value;
+  filterState.breed = document.getElementById('breedSelect').value;
+  filterState.centre = document.getElementById('centreSelect').value;
+
+  filtered = allPets.filter(p => {
+    if(filterState.species !== 'all' && p.species !== filterState.species) return false;
+    if(filterState.breed !== 'all' && p.breed !== filterState.breed) return false;
+    if(filterState.centre !== 'all' && p.centre !== filterState.centre) return false;
+    if(filterState.gender.length > 0 && !filterState.gender.includes(p.gender)) return false;
+    if(filterState.maxAge < 21) {
+      const ageMatch = p.age.match(/(\d+)\s*year/);
+      const petAge = ageMatch ? parseInt(ageMatch[1]) : 0; 
+      if(petAge > filterState.maxAge) return false;
+    }
+    const text = (p.attributes + ' ' + p.description).toLowerCase();
+    if(filterState.reqKids && !/child|kid|family/.test(text)) return false;
+    if(filterState.reqPets && !/dog|cat|animal|sociable/.test(text)) return false;
+    if(filterState.reqLongTerm && (!p.tag || !p.tag.toLowerCase().includes('long'))) return false;
+    return true;
+  });
+
+  idx = 0; render(); hideFilters();
+}
+
+function resetFilters() {
+  document.getElementById('speciesSelect').value = 'all';
+  document.getElementById('breedSelect').value = 'all';
+  document.getElementById('centreSelect').value = 'all';
+  ['btnMale','btnFemale','btnKids','btnPets','btnLongTerm'].forEach(id => document.getElementById(id).classList.remove('active'));
+  filterState = { species: 'all', breed: 'all', centre: 'all', gender: [], maxAge: 21, reqKids: false, reqPets: false, reqLongTerm: false };
+  document.getElementById('ageSlider').value = 21;
+  updateAgeLabel(21);
+  applyFilters();
+}
+
+function showFilters() { document.getElementById('filterView').style.display = 'flex'; }
+function hideFilters() { document.getElementById('filterView').style.display = 'none'; }
+function updateFavCount() {
+  const num = document.getElementById('favNum');
+  const pill = document.getElementById('favCount');
+  if(!num || !pill) return;
+  num.innerText = favs.length;
+  if(favs.length > 0) { pill.classList.remove('pulse'); void pill.offsetWidth; pill.classList.add('pulse'); }
+}
+
+function showFavs() {
+  const list = document.getElementById('favList');
+  if(favs.length === 0) {
+    list.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">No favourites yet!<br>Swipe right on a pet to save them.</div>';
+  } else {
+    list.innerHTML = favs.map(p => `
+      <div class="fav-item" onclick="window.open('${p.profileUrl}','_blank')">
+        <div class="fav-img" style="background-image:url('${p.imageUrl}')"></div>
+        <div style="flex:1;">
+          <div style="font-weight:bold;">${p.name}</div>
+          <div style="font-size:0.8rem; color:#888;">${p.centre}</div>
+        </div>
+        <div style="color:#ddd;">❯</div>
+      </div>`).join('');
+  }
+  document.getElementById('favView').style.display = 'flex';
+}
+function hideFavs() { document.getElementById('favView').style.display = 'none'; }
+
+function openClearModal() { document.getElementById('confirmModal').style.display = 'flex'; }
+function closeConfirmModal() { document.getElementById('confirmModal').style.display = 'none'; }
+function confirmClear() {
+  favs = [];
+  localStorage.setItem('fetch_favs_v2', '[]');
+  updateFavCount(); hideFavs(); closeConfirmModal();
+}
+
+init();
+</script>
+</body>
+</html>
